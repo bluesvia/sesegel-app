@@ -35,6 +35,7 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: false,
       allowRunningInsecureContent: true,
+      backgroundThrottling: false,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -135,10 +136,15 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (e) => log.error('AutoUpdater error:', e));
 
-// WebRTC için gerekli bayraklar
-app.commandLine.appendSwitch('enable-features', 'WebRTC');
-app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
+// WebRTC stabilite için gerekli bayraklar
+app.commandLine.appendSwitch('enable-features', 'WebRTC,WebRtcHideLocalIpsWithMdns');
+app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '70');
 app.commandLine.appendSwitch('disable-web-security');
+app.commandLine.appendSwitch('enable-webrtc-hide-local-ips-with-mdns', 'false');
+app.commandLine.appendSwitch('force-fieldtrials', 'WebRTC-FlexFec-03-Advertised/Enabled/WebRTC-FlexFec-03/Enabled/');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
 app.whenReady().then(() => {
   createWindow();
