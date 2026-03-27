@@ -7,6 +7,7 @@
 <link rel="icon" type="image/x-icon" href="../assets/icon.ico"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=SN+Pro:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
 <style>
 :root{
   --bg1:#1a1209;--bg2:#231c10;--bg3:#2a2010;--bg4:#1e1810;
@@ -438,10 +439,17 @@ body{background:var(--bg1);color:var(--t1);font-family:var(--font);font-size:15p
 
 /* ICON PICKER */
 .icon-picker-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:6px;}
+.icon-search{width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px;color:var(--t1);font-family:var(--font);font-size:12px;outline:none;margin-bottom:6px;}
+.icon-search:focus{border-color:var(--accent1);}
+.icon-search::placeholder{color:var(--t3);}
 .icon-picker-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:200px;overflow-y:auto;margin-bottom:14px;padding:6px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);}
 .icon-pick{width:100%;aspect-ratio:1;border-radius:6px;border:2px solid transparent;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:18px;transition:all .12s;padding:0;}
 .icon-pick:hover{background:var(--bgh);color:var(--t1);border-color:var(--border2);}
 .icon-pick.selected{border-color:var(--accent1);background:rgba(124,58,237,.12);color:var(--accent2);}
+.icon-pick .material-symbols-outlined{font-size:22px;}
+.chi-icon .material-symbols-outlined{font-size:18px;vertical-align:middle;line-height:1;}
+.mhdr-icon .material-symbols-outlined{font-size:20px;vertical-align:middle;line-height:1;}
+.material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
 .icon-pick svg{width:20px;height:20px;fill:currentColor;}
 .chi-icon svg{width:16px;height:16px;fill:currentColor;vertical-align:middle;}
 .mhdr-icon svg{width:18px;height:18px;fill:currentColor;vertical-align:middle;}
@@ -490,6 +498,7 @@ body{background:var(--bg1);color:var(--t1);font-family:var(--font);font-size:15p
   <label>ODA TÜRÜ</label>
   <select id="create-type"><option value="text">Yazı Kanalı</option><option value="voice">Ses Kanalı</option></select>
   <label class="icon-picker-label">ODA İKONU</label>
+  <input class="icon-search" id="icon-search" placeholder="İkon ara... (örn: oyun, silah, müzik)" oninput="filterIcons(this.value)"/>
   <div class="icon-picker-grid" id="icon-picker-grid"></div>
   <div class="modal-btns"><button class="modal-btn secondary" onclick="closeM('m-create')">İptal</button><button class="modal-btn primary" onclick="createRoom()">Oluştur</button></div>
 </div></div>
@@ -835,66 +844,218 @@ const storage=getStorage(app);
 
 const ADMIN_USERNAME="Obiyav";
 
-// ══════ CHANNEL ICONS ══════
+// ══════ CHANNEL ICONS (Material Symbols) ══════
 const CHANNEL_ICONS=[
-  {id:"default",name:"Varsayılan",svg:""},
-  {id:"chat",name:"Sohbet",svg:'<svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>'},
-  {id:"forum",name:"Forum",svg:'<svg viewBox="0 0 24 24"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>'},
-  {id:"announce",name:"Duyuru",svg:'<svg viewBox="0 0 24 24"><path d="M20 2v6.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3H4v14l1.5-1.5L7 17l1.5-1.5L10 17l1-1 1 1 1.5-1.5L15 17l1.5-1.5L18 17l1-1v3.5c0 .28-.22.5-.5.5H4c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h16zm-6 7H6v2h8V9zm4-3H6v2h12V6z"/></svg>'},
-  {id:"gamepad",name:"Oyun",svg:'<svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>'},
-  {id:"music",name:"Müzik",svg:'<svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>'},
-  {id:"headset",name:"Kulaklık",svg:'<svg viewBox="0 0 24 24"><path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/></svg>'},
-  {id:"mic",name:"Mikrofon",svg:'<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V21h2v-3.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>'},
-  {id:"code",name:"Kod",svg:'<svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>'},
-  {id:"terminal",name:"Terminal",svg:'<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-2-1h-6v-2h6v2zM7.5 17l-1.41-1.41L8.67 13l-2.59-2.59L7.5 9l4 4-4 4z"/></svg>'},
-  {id:"book",name:"Kitap",svg:'<svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>'},
-  {id:"photo",name:"Fotoğraf",svg:'<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'},
-  {id:"video",name:"Video",svg:'<svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>'},
-  {id:"link",name:"Link",svg:'<svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>'},
-  {id:"star",name:"Yıldız",svg:'<svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'},
-  {id:"heart",name:"Kalp",svg:'<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'},
-  {id:"bolt",name:"Şimşek",svg:'<svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>'},
-  {id:"fire",name:"Ateş",svg:'<svg viewBox="0 0 24 24"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>'},
-  {id:"trophy",name:"Kupa",svg:'<svg viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>'},
-  {id:"rocket",name:"Roket",svg:'<svg viewBox="0 0 24 24"><path d="M12 2.5s-5 5-5 12.5h10c0-7.5-5-12.5-5-12.5zm0 3.5c1.38 2.2 2.24 4.77 2.45 7.5H9.55c.21-2.73 1.07-5.3 2.45-7.5zM5 17c-.55 0-1 .45-1 1v4h4v-4c0-.55-.45-1-1-1H5zm10 0c-.55 0-1 .45-1 1v4h4v-4c0-.55-.45-1-1-1h-2z"/></svg>'},
-  {id:"flag",name:"Bayrak",svg:'<svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>'},
-  {id:"shield",name:"Kalkan",svg:'<svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>'},
-  {id:"people",name:"Kişiler",svg:'<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>'},
-  {id:"globe",name:"Dünya",svg:'<svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.9-4.33-3.56zm2.95-8H5.08c.96-1.66 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>'},
-  {id:"lock",name:"Kilit",svg:'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>'},
-  {id:"settings",name:"Ayarlar",svg:'<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41L9.25 5.35C8.66 5.59 8.12 5.92 7.63 6.29L5.24 5.33c-.22-.08-.47 0-.59.22L2.74 8.87C2.62 9.08 2.66 9.34 2.86 9.48l2.03 1.58C4.84 11.36 4.8 11.69 4.8 12s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58z M12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>'},
-  {id:"info",name:"Bilgi",svg:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'},
-  {id:"pin",name:"Sabitle",svg:'<svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>'},
-  {id:"help",name:"Yardım",svg:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>'},
-  {id:"inbox",name:"Gelen Kutusu",svg:'<svg viewBox="0 0 24 24"><path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/></svg>'},
-  {id:"archive",name:"Arşiv",svg:'<svg viewBox="0 0 24 24"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/></svg>'},
-  {id:"school",name:"Okul",svg:'<svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>'},
-  {id:"work",name:"İş",svg:'<svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>'},
-  {id:"science",name:"Bilim",svg:'<svg viewBox="0 0 24 24"><path d="M13 11.33L18 18H6l5-6.67V6h2v5.33M15.96 4H8.04c-.42 0-.65.48-.39.81L9 6.5v4.17L3.2 18.4c-.49.66-.02 1.6.8 1.6h16c.82 0 1.29-.94.8-1.6L15 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81z"/></svg>'},
-  {id:"sports",name:"Spor",svg:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 2.07c2.04.28 3.8 1.35 4.96 2.93H15.5c-.6 0-1.15.28-1.5.73V4.07zM8 19.93c-2.04-.28-3.8-1.35-4.96-2.93H5.5c.6 0 1.15-.28 1.5-.73v3.66zM5 12c0-.73.11-1.44.32-2.1L8 12.6v1.9H4.05c-.03-.16-.05-.33-.05-.5zm2 0L4.35 9.1C5.2 7.19 6.85 5.71 8.87 5.1L7 8.4V12zm5-8c.17 0 .33 0 .5.02L10 8.4V5.07C10.64 4.37 11.29 4 12 4z"/></svg>'},
-  {id:"palette",name:"Sanat",svg:'<svg viewBox="0 0 24 24"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>'},
+  {id:"default",name:"Varsayılan",icon:"",tags:"varsayılan default hiç yok"},
+  // Sohbet & İletişim
+  {id:"chat",name:"Sohbet",icon:"chat",tags:"sohbet mesaj konuşma chat message"},
+  {id:"forum",name:"Forum",icon:"forum",tags:"forum tartışma discussion"},
+  {id:"chat_bubble",name:"Mesaj Balonu",icon:"chat_bubble",tags:"mesaj balon bubble"},
+  {id:"question_answer",name:"Soru Cevap",icon:"question_answer",tags:"soru cevap qa"},
+  {id:"campaign",name:"Duyuru",icon:"campaign",tags:"duyuru megafon announcement"},
+  {id:"notifications",name:"Bildirim",icon:"notifications",tags:"bildirim notification zil bell"},
+  {id:"mail",name:"E-Posta",icon:"mail",tags:"eposta mail mektup posta"},
+  {id:"send",name:"Gönder",icon:"send",tags:"gönder send mesaj"},
+  // Oyun & Eğlence
+  {id:"sports_esports",name:"Gamepad",icon:"sports_esports",tags:"oyun game gamepad konsol controller esports"},
+  {id:"joystick",name:"Joystick",icon:"joystick",tags:"joystick oyun game kumanda"},
+  {id:"stadia_controller",name:"Stadia Kol",icon:"stadia_controller",tags:"kol controller stadia oyun game"},
+  {id:"videogame_asset",name:"Oyun Kolu",icon:"videogame_asset",tags:"oyun kolu game controller asset"},
+  {id:"casino",name:"Casino",icon:"casino",tags:"casino zar dice şans kumar"},
+  {id:"extension",name:"Yapboz",icon:"extension",tags:"yapboz puzzle parça extension"},
+  {id:"playing_cards",name:"Kart",icon:"playing_cards",tags:"kart card iskambil oyun"},
+  {id:"strategy",name:"Strateji",icon:"strategy",tags:"strateji satranç chess strategy planlama"},
+  {id:"trophy",name:"Kupa",icon:"trophy",tags:"kupa ödül trophy kazanan winner turnuva"},
+  {id:"leaderboard",name:"Sıralama",icon:"leaderboard",tags:"sıralama liderlik leaderboard rank"},
+  {id:"sports_score",name:"Skor",icon:"sports_score",tags:"skor puan score bayrak flag"},
+  {id:"military_tech",name:"Madalya",icon:"military_tech",tags:"madalya medal askeri military"},
+  {id:"emoji_events",name:"Turnuva",icon:"emoji_events",tags:"turnuva kupa etkinlik event"},
+  // Silah & Savaş
+  {id:"swords",name:"Kılıç",icon:"swords",tags:"kılıç sword savaş dövüş fight melee"},
+  {id:"shield",name:"Kalkan",icon:"shield",tags:"kalkan shield koruma savunma defense"},
+  {id:"gps_fixed",name:"Nişan",icon:"gps_fixed",tags:"nişan hedef crosshair aim target silah"},
+  {id:"local_fire_department",name:"Ateş",icon:"local_fire_department",tags:"ateş fire yangın alev flame"},
+  {id:"bolt",name:"Şimşek",icon:"bolt",tags:"şimşek yıldırım bolt lightning güç"},
+  {id:"explosion",name:"Patlama",icon:"explosion",tags:"patlama bomba explosion bomb"},
+  {id:"skull",name:"Kafatası",icon:"skull",tags:"kafatası skull ölüm death tehlike"},
+  {id:"dangerous",name:"Tehlike",icon:"dangerous",tags:"tehlike danger uyarı warning"},
+  {id:"security",name:"Güvenlik",icon:"security",tags:"güvenlik security koruma kalkan"},
+  // Müzik & Ses
+  {id:"music_note",name:"Müzik",icon:"music_note",tags:"müzik music nota note şarkı"},
+  {id:"headphones",name:"Kulaklık",icon:"headphones",tags:"kulaklık headphone dinleme"},
+  {id:"mic",name:"Mikrofon",icon:"mic",tags:"mikrofon mic ses voice kayıt"},
+  {id:"radio",name:"Radyo",icon:"radio",tags:"radyo radio yayın"},
+  {id:"piano",name:"Piyano",icon:"piano",tags:"piyano piano müzik enstrüman"},
+  {id:"graphic_eq",name:"Ekolayzer",icon:"graphic_eq",tags:"ekolayzer equalizer ses frekans"},
+  {id:"library_music",name:"Kütüphane",icon:"library_music",tags:"müzik kütüphane library koleksiyon"},
+  {id:"queue_music",name:"Çalma Listesi",icon:"queue_music",tags:"çalma liste playlist müzik sıra"},
+  // Yazılım & Teknoloji
+  {id:"code",name:"Kod",icon:"code",tags:"kod code yazılım programlama geliştirme dev"},
+  {id:"terminal",name:"Terminal",icon:"terminal",tags:"terminal konsol console komut cmd"},
+  {id:"data_object",name:"JSON",icon:"data_object",tags:"json data nesne object veri"},
+  {id:"bug_report",name:"Hata",icon:"bug_report",tags:"hata bug böcek rapor debug"},
+  {id:"memory",name:"RAM",icon:"memory",tags:"ram bellek memory çip chip donanım"},
+  {id:"developer_board",name:"Devre",icon:"developer_board",tags:"devre board geliştirici developer donanım"},
+  {id:"dns",name:"Sunucu",icon:"dns",tags:"sunucu server dns hosting"},
+  {id:"cloud",name:"Bulut",icon:"cloud",tags:"bulut cloud sunucu hosting"},
+  {id:"storage",name:"Depolama",icon:"storage",tags:"depolama storage disk veri"},
+  {id:"api",name:"API",icon:"api",tags:"api bağlantı entegrasyon integration"},
+  {id:"webhook",name:"Webhook",icon:"webhook",tags:"webhook otomasyon bot automation"},
+  {id:"robot_2",name:"Robot",icon:"robot_2",tags:"robot bot otomasyon yapay zeka ai"},
+  {id:"smart_toy",name:"Bot",icon:"smart_toy",tags:"bot oyuncak toy akıllı smart"},
+  // Medya & İçerik
+  {id:"photo_camera",name:"Fotoğraf",icon:"photo_camera",tags:"fotoğraf foto kamera camera resim"},
+  {id:"videocam",name:"Video",icon:"videocam",tags:"video kamera film çekim"},
+  {id:"live_tv",name:"Canlı Yayın",icon:"live_tv",tags:"canlı yayın live stream tv televizyon"},
+  {id:"movie",name:"Film",icon:"movie",tags:"film sinema movie klip"},
+  {id:"image",name:"Resim",icon:"image",tags:"resim görsel image fotoğraf"},
+  {id:"gif_box",name:"GIF",icon:"gif_box",tags:"gif animasyon hareket meme"},
+  {id:"podcasts",name:"Podcast",icon:"podcasts",tags:"podcast yayın ses audio"},
+  {id:"screen_share",name:"Ekran Paylaşımı",icon:"screen_share",tags:"ekran paylaşım screen share"},
+  // Spor & Aktivite
+  {id:"sports_soccer",name:"Futbol",icon:"sports_soccer",tags:"futbol soccer top ball spor"},
+  {id:"sports_basketball",name:"Basketbol",icon:"sports_basketball",tags:"basketbol basketball spor"},
+  {id:"sports_tennis",name:"Tenis",icon:"sports_tennis",tags:"tenis raket spor"},
+  {id:"sports_motorsports",name:"Yarış",icon:"sports_motorsports",tags:"yarış araba car motorsport kask"},
+  {id:"fitness_center",name:"Spor Salonu",icon:"fitness_center",tags:"spor gym fitness ağırlık halter"},
+  {id:"pool",name:"Yüzme",icon:"pool",tags:"yüzme havuz pool su water"},
+  {id:"skateboarding",name:"Kaykay",icon:"skateboarding",tags:"kaykay skateboard sokak"},
+  {id:"hiking",name:"Yürüyüş",icon:"hiking",tags:"yürüyüş doğa hiking outdoor dağ"},
+  // Eğitim & Bilgi
+  {id:"school",name:"Okul",icon:"school",tags:"okul school eğitim öğrenci education"},
+  {id:"auto_stories",name:"Kitap",icon:"auto_stories",tags:"kitap book okuma hikaye story"},
+  {id:"science",name:"Bilim",icon:"science",tags:"bilim science deney kimya lab"},
+  {id:"psychology",name:"Psikoloji",icon:"psychology",tags:"psikoloji beyin brain akıl düşünce"},
+  {id:"calculate",name:"Matematik",icon:"calculate",tags:"matematik hesap calculator sayı"},
+  {id:"history_edu",name:"Tarih",icon:"history_edu",tags:"tarih history yazı kalem"},
+  {id:"translate",name:"Çeviri",icon:"translate",tags:"çeviri translate dil language"},
+  {id:"biotech",name:"Biyoloji",icon:"biotech",tags:"biyoloji biology dna gen"},
+  // Yemek & İçecek
+  {id:"restaurant",name:"Restoran",icon:"restaurant",tags:"restoran yemek food yiyecek"},
+  {id:"local_cafe",name:"Kafe",icon:"local_cafe",tags:"kafe kahve cafe coffee çay"},
+  {id:"local_bar",name:"Bar",icon:"local_bar",tags:"bar içecek cocktail drink"},
+  {id:"local_pizza",name:"Pizza",icon:"local_pizza",tags:"pizza yemek food"},
+  {id:"cake",name:"Pasta",icon:"cake",tags:"pasta doğumgünü cake birthday kutlama"},
+  {id:"icecream",name:"Dondurma",icon:"icecream",tags:"dondurma ice cream tatlı"},
+  // Seyahat & Yerler
+  {id:"flight",name:"Uçak",icon:"flight",tags:"uçak uçuş havalimanı airport seyahat travel"},
+  {id:"rocket_launch",name:"Roket",icon:"rocket_launch",tags:"roket uzay space fırlatma launch"},
+  {id:"public",name:"Dünya",icon:"public",tags:"dünya world globe gezegen kürre"},
+  {id:"explore",name:"Pusula",icon:"explore",tags:"pusula keşif explore compass yön"},
+  {id:"landscape",name:"Doğa",icon:"landscape",tags:"doğa manzara dağ mountain landscape"},
+  {id:"beach_access",name:"Plaj",icon:"beach_access",tags:"plaj deniz beach şemsiye tatil"},
+  {id:"castle",name:"Kale",icon:"castle",tags:"kale castle ortaçağ medieval"},
+  {id:"forest",name:"Orman",icon:"forest",tags:"orman ağaç forest tree doğa"},
+  // Para & İş
+  {id:"payments",name:"Ödeme",icon:"payments",tags:"ödeme para money payment banka"},
+  {id:"work",name:"İş",icon:"work",tags:"iş çanta work business ofis"},
+  {id:"storefront",name:"Mağaza",icon:"storefront",tags:"mağaza dükkan store shop alışveriş"},
+  {id:"trending_up",name:"Trend",icon:"trending_up",tags:"trend artış yükseliş grafik borsa"},
+  {id:"savings",name:"Birikim",icon:"savings",tags:"birikim tasarruf savings kumbara piggy"},
+  {id:"currency_bitcoin",name:"Bitcoin",icon:"currency_bitcoin",tags:"bitcoin kripto crypto para coin"},
+  // Sosyal & Kişiler
+  {id:"group",name:"Grup",icon:"group",tags:"grup kişiler people takım team"},
+  {id:"person",name:"Kişi",icon:"person",tags:"kişi birey person kullanıcı user"},
+  {id:"diversity_3",name:"Topluluk",icon:"diversity_3",tags:"topluluk community çeşitlilik diversity"},
+  {id:"handshake",name:"Anlaşma",icon:"handshake",tags:"anlaşma el sıkışma handshake partner"},
+  {id:"favorite",name:"Kalp",icon:"favorite",tags:"kalp sevgi heart love favorit beğeni"},
+  {id:"mood",name:"Gülen Yüz",icon:"mood",tags:"gülen yüz mutlu happy smiley emoji"},
+  {id:"sentiment_very_satisfied",name:"Çok Mutlu",icon:"sentiment_very_satisfied",tags:"mutlu gülümseme satisfied happy"},
+  {id:"celebration",name:"Kutlama",icon:"celebration",tags:"kutlama parti celebration confetti eğlence"},
+  // Araçlar & Nesneler
+  {id:"construction",name:"İnşaat",icon:"construction",tags:"inşaat araç tool yapı construction"},
+  {id:"build",name:"Anahtar",icon:"build",tags:"anahtar ingiliz wrench araç tool tamir"},
+  {id:"settings",name:"Ayarlar",icon:"settings",tags:"ayarlar dişli gear settings çark"},
+  {id:"lock",name:"Kilit",icon:"lock",tags:"kilit lock güvenlik kilitli"},
+  {id:"key",name:"Anahtar",icon:"key",tags:"anahtar key şifre password"},
+  {id:"lightbulb",name:"Ampul",icon:"lightbulb",tags:"ampul fikir idea lightbulb ışık"},
+  {id:"search",name:"Arama",icon:"search",tags:"arama search büyüteç ara bul"},
+  {id:"link",name:"Link",icon:"link",tags:"link bağlantı url web"},
+  {id:"pin_drop",name:"Konum",icon:"pin_drop",tags:"konum pin yer location harita"},
+  {id:"flag",name:"Bayrak",icon:"flag",tags:"bayrak flag işaret marker"},
+  {id:"star",name:"Yıldız",icon:"star",tags:"yıldız star favorit önemli"},
+  {id:"push_pin",name:"Raptiye",icon:"push_pin",tags:"raptiye pin sabitle iğne"},
+  {id:"info",name:"Bilgi",icon:"info",tags:"bilgi info hakkında about"},
+  {id:"help",name:"Yardım",icon:"help",tags:"yardım help soru destek"},
+  {id:"bookmark",name:"Yer İşareti",icon:"bookmark",tags:"yer işareti bookmark kaydet save"},
+  // Hayvanlar & Doğa
+  {id:"pets",name:"Pati",icon:"pets",tags:"pati hayvan pet kedi köpek cat dog"},
+  {id:"cruelty_free",name:"Tavşan",icon:"cruelty_free",tags:"tavşan rabbit hayvan animal"},
+  {id:"bug_report2",name:"Böcek",icon:"pest_control",tags:"böcek bug pest hayvan"},
+  {id:"grass",name:"Çimen",icon:"grass",tags:"çimen çim grass yeşil doğa"},
+  {id:"park",name:"Park",icon:"park",tags:"park ağaç tree doğa"},
+  {id:"water_drop",name:"Su Damlası",icon:"water_drop",tags:"su damla water drop"},
+  {id:"ac_unit",name:"Kar",icon:"ac_unit",tags:"kar snow buz kristal soğuk"},
+  {id:"sunny",name:"Güneş",icon:"sunny",tags:"güneş sun hava sıcak"},
+  {id:"thunderstorm",name:"Fırtına",icon:"thunderstorm",tags:"fırtına yıldırım storm gök gürültüsü"},
+  // Araçlar & Taşıtlar
+  {id:"directions_car",name:"Araba",icon:"directions_car",tags:"araba car araç otomobil"},
+  {id:"two_wheeler",name:"Motosiklet",icon:"two_wheeler",tags:"motosiklet motorcycle motor"},
+  {id:"directions_boat",name:"Gemi",icon:"directions_boat",tags:"gemi tekne boat ship deniz"},
+  {id:"train",name:"Tren",icon:"train",tags:"tren train metro ulaşım"},
+  {id:"helicopter",name:"Helikopter",icon:"helicopter",tags:"helikopter heli uçuş"},
+  // Şekiller & Semboller
+  {id:"circle",name:"Daire",icon:"circle",tags:"daire circle şekil yuvarlak"},
+  {id:"hexagon",name:"Altıgen",icon:"hexagon",tags:"altıgen hexagon şekil geometri"},
+  {id:"diamond",name:"Elmas",icon:"diamond",tags:"elmas diamond mücevher gem değerli"},
+  {id:"emergency",name:"Acil",icon:"emergency",tags:"acil emergency çarpı yıldız"},
+  {id:"change_history",name:"Üçgen",icon:"change_history",tags:"üçgen triangle şekil piramit"},
+  {id:"all_inclusive",name:"Sonsuz",icon:"all_inclusive",tags:"sonsuz infinity sınırsız"},
+  {id:"tag",name:"Etiket",icon:"tag",tags:"etiket tag hashtag"},
+  {id:"verified",name:"Onaylı",icon:"verified",tags:"onaylı doğrulanmış verified tik check"},
+  {id:"block",name:"Engel",icon:"block",tags:"engel yasak block ban"},
+  {id:"thumb_up",name:"Beğen",icon:"thumb_up",tags:"beğen like başparmak up"},
+  // Ekstra
+  {id:"palette",name:"Sanat",icon:"palette",tags:"sanat palet renk color art çizim"},
+  {id:"draw",name:"Çizim",icon:"draw",tags:"çizim kalem draw pencil sanat"},
+  {id:"movie_filter",name:"Sinema",icon:"movie_filter",tags:"sinema film cinema yıldız"},
+  {id:"theater_comedy",name:"Tiyatro",icon:"theater_comedy",tags:"tiyatro komedi theater sahne"},
+  {id:"recycling",name:"Geri Dönüşüm",icon:"recycling",tags:"geri dönüşüm recycle çevre"},
+  {id:"volunteer_activism",name:"Yardım Eli",icon:"volunteer_activism",tags:"yardım gönüllü kalp el bağış"},
+  {id:"spa",name:"Spa",icon:"spa",tags:"spa çiçek rahatla meditasyon zen"},
+  {id:"self_improvement",name:"Meditasyon",icon:"self_improvement",tags:"meditasyon yoga zen huzur"},
+  {id:"local_hospital",name:"Sağlık",icon:"local_hospital",tags:"sağlık hastane health hospital artı"},
+  {id:"attach_money",name:"Dolar",icon:"attach_money",tags:"dolar para money usd"},
+  {id:"nightlife",name:"Gece Hayatı",icon:"nightlife",tags:"gece hayatı bar disko nightlife parti"},
+  {id:"event",name:"Etkinlik",icon:"event",tags:"etkinlik takvim event calendar planlama"},
+  {id:"schedule",name:"Saat",icon:"schedule",tags:"saat zaman time clock schedule"},
+  {id:"speed",name:"Hız",icon:"speed",tags:"hız speed hızlı fast gauge"},
+  {id:"rocket",name:"Roket",icon:"rocket",tags:"roket uzay space fırlatma"},
+  {id:"token",name:"Token",icon:"token",tags:"token jeton kripto nft coin"},
+  {id:"workspace_premium",name:"Premium",icon:"workspace_premium",tags:"premium vip altın gold madalya"},
+  {id:"psychology_alt",name:"Beyin",icon:"psychology_alt",tags:"beyin akıl brain düşünce zeka"},
+  {id:"magic_button",name:"Sihir",icon:"magic_button",tags:"sihir büyü magic sihirbaz"},
+  {id:"auto_fix_high",name:"Değnek",icon:"auto_fix_high",tags:"değnek sihir fix büyü"},
+  {id:"whatshot",name:"Trend Ateş",icon:"whatshot",tags:"trend popüler sıcak hot ateş fire"},
+  {id:"flash_on",name:"Flaş",icon:"flash_on",tags:"flaş flash ışık hızlı"},
+  {id:"visibility",name:"Göz",icon:"visibility",tags:"göz bakış görüş eye gizli izle"},
+  {id:"face",name:"Yüz",icon:"face",tags:"yüz face kişi avatar profil"},
 ];
 let selectedIcon="default";
 
-function renderIconPicker(){
+function renderIconPicker(filter=""){
   const grid=document.getElementById("icon-picker-grid");if(!grid)return;
-  grid.innerHTML=CHANNEL_ICONS.map(ic=>{
-    const content=ic.id==="default"?"—":ic.svg;
+  const q=filter.toLowerCase().trim();
+  const filtered=q?CHANNEL_ICONS.filter(ic=>ic.tags.includes(q)||ic.name.toLowerCase().includes(q)):CHANNEL_ICONS;
+  if(filtered.length===0){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--t3);font-size:12px;">Sonuç bulunamadı</div>';return;}
+  grid.innerHTML=filtered.map(ic=>{
+    const content=ic.id==="default"?"—":`<span class="material-symbols-outlined">${ic.icon}</span>`;
     return`<button class="icon-pick${ic.id===selectedIcon?" selected":""}" data-icon="${ic.id}" title="${ic.name}" onclick="pickIcon('${ic.id}')">${content}</button>`;
   }).join("");
 }
+window.filterIcons=function(val){renderIconPicker(val);};
 window.pickIcon=function(id){
   selectedIcon=id;
   document.querySelectorAll(".icon-pick").forEach(el=>{el.classList.toggle("selected",el.dataset.icon===id);});
 };
-function getIconSvg(iconId){
+function getIconHtml(iconId){
   const ic=CHANNEL_ICONS.find(i=>i.id===iconId);
-  return ic&&ic.svg?ic.svg:"";
+  return ic&&ic.icon?`<span class="material-symbols-outlined">${ic.icon}</span>`:"";
 }
 function getChannelIcon(room){
   if(room.icon&&room.icon!=="default"){
-    const svg=getIconSvg(room.icon);
-    if(svg)return svg;
+    const html=getIconHtml(room.icon);
+    if(html)return html;
   }
   return room.type==="voice"?"🔊":"#";
 }
@@ -1382,6 +1543,7 @@ window.openCreateRoom=function(type){
   if(!curServer){toast("⚠️ Önce bir sunucu oluştur");return;}
   document.getElementById("create-name").value="";
   document.getElementById("create-type").value=type||"text";
+  document.getElementById("icon-search").value="";
   selectedIcon="default";
   renderIconPicker();
   openM("m-create");
