@@ -1140,7 +1140,8 @@ window.openRoom=function(rid){
   document.getElementById("mhdr-name").textContent=r.name;
   document.getElementById("mhdr-icon").textContent=r.type==="voice"?"🔊":"#";
   renderSB();
-  if(r.type==="voice")showVCJoin(rid);else loadMsgs(rid);
+  loadMsgs(rid);
+  if(r.type==="voice")joinVoice(rid);
   loadMembers(rid);showMain();
 };
 
