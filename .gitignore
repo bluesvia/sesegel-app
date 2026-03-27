@@ -2,3 +2,8 @@ node_modules/
 dist/
 electron-log/
 *.log
+*.tmp
+*.zip
+sesegel-app/
+src/index.txt
+src/index_old.html
