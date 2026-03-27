@@ -769,7 +769,7 @@ body{background:var(--bg1);color:var(--t1);font-family:var(--font);font-size:15p
 <!-- MAIN APP SCRIPT -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getDatabase,ref,set,get,push,remove,update,onValue,onDisconnect,serverTimestamp,off}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import{getDatabase,ref,set,get,push,remove,update,onValue,onChildAdded,onChildChanged,onChildRemoved,onDisconnect,serverTimestamp,off}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import{getStorage,ref as sRef,uploadBytes,getDownloadURL}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig={
@@ -794,7 +794,7 @@ let noiseEnabled=false,noiseProcessor=null,noiseAudioCtx=null;
 let micGain=1,micGainNode=null,outGain=1;
 let selMic="",selSpk="";
 let userVolumes={},audioCtxs={},speakTmr={},speakRaf={},speakingState={};
-let mpVis=true,msgUnsub=null;
+let mpVis=true;
 let servers={},curServer=null;
 let ctxUid=null;
 let serverAvatarData=null;
@@ -1165,46 +1165,89 @@ window.openRoom=function(rid){
 
 // ══════ MESSAGES ══════
 const EMOJIS=["👍","🔥","💀","🎯","😂","👏","🤙","💣","😤","🫡"];
+let msgListeners=[];
+let localMsgs={};
+
+function cleanupMsgListeners(){
+  msgListeners.forEach(fn=>{try{fn();}catch(e){}});
+  msgListeners=[];
+  localMsgs={};
+}
+
+function renderMessages(rid){
+  const wrap=document.getElementById("msgwrap");
+  if(!wrap||curRoom!==rid)return;
+  const keys=Object.keys(localMsgs);
+  if(keys.length===0){wrap.innerHTML=`<div class="empty"><h3>Henüz mesaj yok</h3><p style="color:var(--t3)">İlk mesajı sen yaz!</p></div>`;return;}
+  const msgs=keys.map(k=>localMsgs[k]).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  let html="";let lastDate="",lastAuthor="";
+  msgs.forEach(m=>{
+    const d=m.ts?ds(m.ts):"";
+    if(d&&d!==lastDate){html+=`<div class="datediv"><span>${d}</span></div>`;lastDate=d;lastAuthor="";}
+    const isFirst=m.uid!==lastAuthor;lastAuthor=m.uid;
+    const c=uCol(m.username||"?");
+    const img=m.profileImage?`<img src="${esc(m.profileImage)}">`:ini(m.username||"?");
+    html+=`<div class="mgroup${isFirst?" first":""}">`;
+    if(isFirst){
+      html+=`<div class="mav-col"><div class="mav" style="background:${c}">${img}</div></div>`;
+      html+=`<div class="mcontent"><div class="mmeta"><span class="mauthor" style="color:var(--accent2)">${esc(m.username||"?")}${crownBadge(m.username||"")}</span>`;
+      html+=`<span class="mts">${m.ts?ts(m.ts)+" · "+d:""}</span></div>`;
+    }else{html+=`<div class="mav-col"></div><div class="mcontent">`;}
+    html+=`<div class="mtext">${esc(m.text||"")}</div>`;
+    if(m.attachment){
+      if(m.attachment.type&&m.attachment.type.startsWith("image/")){
+        html+=`<div class="mattach"><img src="${esc(m.attachment.url)}" class="mattach-img" onclick="window.open('${esc(m.attachment.url)}','_blank')"></div>`;
+      }else{
+        html+=`<div class="mattach"><a href="${esc(m.attachment.url)}" target="_blank" class="mattach-file">📎 ${esc(m.attachment.name)}</a></div>`;
+      }
+    }
+    if(m.reactions){html+=`<div class="mrxns">`;Object.keys(m.reactions).forEach(emoji=>{const users=m.reactions[emoji];if(!users)return;const count=Object.keys(users).length;const mine=me&&users[me.uid]?"mine":"";html+=`<span class="rxn ${mine}" onclick="toggleRxn('${rid}','${m.id}','${emoji}')">${emoji} <span class="rxn-cnt">${count}</span></span>`;});html+=`</div>`;}
+    html+=`</div><div class="mhov">`;EMOJIS.slice(0,5).forEach(e=>html+=`<button class="mhov-btn" onclick="quickReact('${rid}','${m.id}','${e}')">${e}</button>`);html+=`</div></div>`;
+  });
+  wrap.innerHTML=html;wrap.scrollTop=wrap.scrollHeight;
+}
 
 function loadMsgs(rid){
-  if(msgUnsub){msgUnsub();msgUnsub=null;}
+  cleanupMsgListeners();
   const mref=ref(db,`messages/${rid}`);
-  const listener=onValue(mref,snap=>{
-    try{
-    if(curRoom!==rid)return;
-    const wrap=document.getElementById("msgwrap");
-    if(!wrap)return;
-    if(!snap.exists()){wrap.innerHTML=`<div class="empty"><h3>Henüz mesaj yok</h3><p style="color:var(--t3)">İlk mesajı sen yaz!</p></div>`;return;}
-    const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    msgs.sort((a,b)=>(a.ts||0)-(b.ts||0));
-    let html="";let lastDate="",lastAuthor="";
-    msgs.forEach(m=>{
-      const d=m.ts?ds(m.ts):"";
-      if(d&&d!==lastDate){html+=`<div class="datediv"><span>${d}</span></div>`;lastDate=d;lastAuthor="";}
-      const isFirst=m.uid!==lastAuthor;lastAuthor=m.uid;
-      const c=uCol(m.username||"?");
-      const img=m.profileImage?`<img src="${esc(m.profileImage)}">`:ini(m.username||"?");
-      html+=`<div class="mgroup${isFirst?" first":""}">`;
-      if(isFirst){
-        html+=`<div class="mav-col"><div class="mav" style="background:${c}">${img}</div></div>`;
-        html+=`<div class="mcontent"><div class="mmeta"><span class="mauthor" style="color:var(--accent2)">${esc(m.username||"?")}${crownBadge(m.username||"")}</span>`;
-        html+=`<span class="mts">${m.ts?ts(m.ts)+" · "+d:""}</span></div>`;
-      }else{html+=`<div class="mav-col"></div><div class="mcontent">`;}
-      html+=`<div class="mtext">${esc(m.text||"")}</div>`;
-      if(m.attachment){
-        if(m.attachment.type&&m.attachment.type.startsWith("image/")){
-          html+=`<div class="mattach"><img src="${esc(m.attachment.url)}" class="mattach-img" onclick="window.open('${esc(m.attachment.url)}','_blank')"></div>`;
-        }else{
-          html+=`<div class="mattach"><a href="${esc(m.attachment.url)}" target="_blank" class="mattach-file">📎 ${esc(m.attachment.name)}</a></div>`;
-        }
+  let initialLoad=true;
+  let batchTimer=null;
+
+  const scheduleRender=()=>{
+    if(batchTimer)clearTimeout(batchTimer);
+    batchTimer=setTimeout(()=>{renderMessages(rid);},initialLoad?0:100);
+  };
+
+  // İlk yüklemede tüm mesajları al
+  get(mref).then(snap=>{
+    if(snap.exists()){
+      snap.forEach(c=>{localMsgs[c.key]={id:c.key,...c.val()};});
+    }
+    renderMessages(rid);
+    initialLoad=false;
+
+    // Yeni mesajlar için canlı dinleyiciler
+    const u1=onChildAdded(mref,(snap)=>{
+      if(initialLoad)return;
+      if(!localMsgs[snap.key]){
+        localMsgs[snap.key]={id:snap.key,...snap.val()};
+        scheduleRender();
       }
-      if(m.reactions){html+=`<div class="mrxns">`;Object.keys(m.reactions).forEach(emoji=>{const users=m.reactions[emoji];if(!users)return;const count=Object.keys(users).length;const mine=me&&users[me.uid]?"mine":"";html+=`<span class="rxn ${mine}" onclick="toggleRxn('${rid}','${m.id}','${emoji}')">${emoji} <span class="rxn-cnt">${count}</span></span>`;});html+=`</div>`;}
-      html+=`</div><div class="mhov">`;EMOJIS.slice(0,5).forEach(e=>html+=`<button class="mhov-btn" onclick="quickReact('${rid}','${m.id}','${e}')">${e}</button>`);html+=`</div></div>`;
     });
-    wrap.innerHTML=html;wrap.scrollTop=wrap.scrollHeight;
-    }catch(e){console.error("loadMsgs render error:",e);}
-  },err=>{console.error("loadMsgs Firebase error:",err);});
-  msgUnsub=()=>{off(mref);listener;};
+    const u2=onChildChanged(mref,(snap)=>{
+      localMsgs[snap.key]={id:snap.key,...snap.val()};
+      scheduleRender();
+    });
+    const u3=onChildRemoved(mref,(snap)=>{
+      delete localMsgs[snap.key];
+      scheduleRender();
+    });
+    msgListeners.push(u1,u2,u3);
+  }).catch(e=>{
+    console.error("loadMsgs initial get error:",e);
+    const wrap=document.getElementById("msgwrap");
+    if(wrap)wrap.innerHTML=`<div class="empty"><h3>Mesajlar yüklenemedi</h3><p style="color:var(--t3)">${esc(e.message)}</p></div>`;
+  });
 }
 
 window.quickReact=window.toggleRxn=async function(rid,mid,emoji){
@@ -1216,8 +1259,7 @@ window.quickReact=window.toggleRxn=async function(rid,mid,emoji){
 let pendingAttachment=null;
 
 window.sendMsg=async function(){
-  if(!curRoom){console.warn("sendMsg: curRoom yok");return;}
-  if(!me||!me.uid){console.warn("sendMsg: me yok");return;}
+  if(!curRoom||!me||!me.uid)return;
   const inp=document.getElementById("msginput");
   const text=inp.value.trim();
   if(!text&&!pendingAttachment)return;
@@ -1227,9 +1269,15 @@ window.sendMsg=async function(){
   inp.value="";inp.style.height="auto";
   try{
     const newRef=push(ref(db,`messages/${room}`));
+    // Anında yerel olarak göster (optimistic update)
+    localMsgs[newRef.key]={id:newRef.key,...msgData};
+    renderMessages(room);
+    // Firebase'e yaz
     await set(newRef,msgData);
-    console.log("sendMsg OK:",newRef.key);
-  }catch(e){console.error("sendMsg error:",e);toast("⚠️ Mesaj gönderilemedi: "+e.message);}
+  }catch(e){
+    console.error("sendMsg error:",e);
+    toast("⚠️ Mesaj gönderilemedi: "+e.message);
+  }
 };
 
 window.pickFile=function(){document.getElementById("fileinput").click();};
