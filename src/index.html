@@ -1167,11 +1167,13 @@ window.openRoom=function(rid){
 const EMOJIS=["👍","🔥","💀","🎯","😂","👏","🤙","💣","😤","🫡"];
 
 function loadMsgs(rid){
-  if(msgUnsub)msgUnsub();
-  const mref=ref(db,`messages/${rid}`);msgUnsub=()=>off(mref);
-  onValue(mref,snap=>{
+  if(msgUnsub){msgUnsub();msgUnsub=null;}
+  const mref=ref(db,`messages/${rid}`);
+  const listener=onValue(mref,snap=>{
     try{
+    if(curRoom!==rid)return;
     const wrap=document.getElementById("msgwrap");
+    if(!wrap)return;
     if(!snap.exists()){wrap.innerHTML=`<div class="empty"><h3>Henüz mesaj yok</h3><p style="color:var(--t3)">İlk mesajı sen yaz!</p></div>`;return;}
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
     msgs.sort((a,b)=>(a.ts||0)-(b.ts||0));
@@ -1180,15 +1182,15 @@ function loadMsgs(rid){
       const d=m.ts?ds(m.ts):"";
       if(d&&d!==lastDate){html+=`<div class="datediv"><span>${d}</span></div>`;lastDate=d;lastAuthor="";}
       const isFirst=m.uid!==lastAuthor;lastAuthor=m.uid;
-      const c=uCol(m.username);
-      const img=m.profileImage?`<img src="${esc(m.profileImage)}">`:ini(m.username);
+      const c=uCol(m.username||"?");
+      const img=m.profileImage?`<img src="${esc(m.profileImage)}">`:ini(m.username||"?");
       html+=`<div class="mgroup${isFirst?" first":""}">`;
       if(isFirst){
         html+=`<div class="mav-col"><div class="mav" style="background:${c}">${img}</div></div>`;
-        html+=`<div class="mcontent"><div class="mmeta"><span class="mauthor" style="color:var(--accent2)">${esc(m.username)}${crownBadge(m.username)}</span>`;
+        html+=`<div class="mcontent"><div class="mmeta"><span class="mauthor" style="color:var(--accent2)">${esc(m.username||"?")}${crownBadge(m.username||"")}</span>`;
         html+=`<span class="mts">${m.ts?ts(m.ts)+" · "+d:""}</span></div>`;
       }else{html+=`<div class="mav-col"></div><div class="mcontent">`;}
-      html+=`<div class="mtext">${esc(m.text)}</div>`;
+      html+=`<div class="mtext">${esc(m.text||"")}</div>`;
       if(m.attachment){
         if(m.attachment.type&&m.attachment.type.startsWith("image/")){
           html+=`<div class="mattach"><img src="${esc(m.attachment.url)}" class="mattach-img" onclick="window.open('${esc(m.attachment.url)}','_blank')"></div>`;
@@ -1196,12 +1198,13 @@ function loadMsgs(rid){
           html+=`<div class="mattach"><a href="${esc(m.attachment.url)}" target="_blank" class="mattach-file">📎 ${esc(m.attachment.name)}</a></div>`;
         }
       }
-      if(m.reactions){html+=`<div class="mrxns">`;Object.keys(m.reactions).forEach(emoji=>{const users=m.reactions[emoji];const count=Object.keys(users).length;const mine=users[me.uid]?"mine":"";html+=`<span class="rxn ${mine}" onclick="toggleRxn('${rid}','${m.id}','${emoji}')">${emoji} <span class="rxn-cnt">${count}</span></span>`;});html+=`</div>`;}
+      if(m.reactions){html+=`<div class="mrxns">`;Object.keys(m.reactions).forEach(emoji=>{const users=m.reactions[emoji];if(!users)return;const count=Object.keys(users).length;const mine=me&&users[me.uid]?"mine":"";html+=`<span class="rxn ${mine}" onclick="toggleRxn('${rid}','${m.id}','${emoji}')">${emoji} <span class="rxn-cnt">${count}</span></span>`;});html+=`</div>`;}
       html+=`</div><div class="mhov">`;EMOJIS.slice(0,5).forEach(e=>html+=`<button class="mhov-btn" onclick="quickReact('${rid}','${m.id}','${e}')">${e}</button>`);html+=`</div></div>`;
     });
     wrap.innerHTML=html;wrap.scrollTop=wrap.scrollHeight;
     }catch(e){console.error("loadMsgs render error:",e);}
-  },err=>{console.error("loadMsgs Firebase error:",err);toast("⚠️ Mesajlar yüklenemedi");});
+  },err=>{console.error("loadMsgs Firebase error:",err);});
+  msgUnsub=()=>{off(mref);listener;};
 }
 
 window.quickReact=window.toggleRxn=async function(rid,mid,emoji){
@@ -1213,15 +1216,20 @@ window.quickReact=window.toggleRxn=async function(rid,mid,emoji){
 let pendingAttachment=null;
 
 window.sendMsg=async function(){
-  if(!curRoom)return;const inp=document.getElementById("msginput");
+  if(!curRoom){console.warn("sendMsg: curRoom yok");return;}
+  if(!me||!me.uid){console.warn("sendMsg: me yok");return;}
+  const inp=document.getElementById("msginput");
   const text=inp.value.trim();
   if(!text&&!pendingAttachment)return;
-  const msgData={uid:me.uid,username:me.username,text:text||"",ts:Date.now(),profileImage:me.profileImage||null};
+  const room=curRoom;
+  const msgData={uid:me.uid,username:me.username||"?",text:text||"",ts:Date.now(),profileImage:me.profileImage||null};
   if(pendingAttachment){msgData.attachment=pendingAttachment;pendingAttachment=null;clearAttachPreview();}
+  inp.value="";inp.style.height="auto";
   try{
-    await set(push(ref(db,`messages/${curRoom}`)),msgData);
-    inp.value="";inp.style.height="auto";
-  }catch(e){console.error("sendMsg error:",e);toast("⚠️ Mesaj gönderilemedi");}
+    const newRef=push(ref(db,`messages/${room}`));
+    await set(newRef,msgData);
+    console.log("sendMsg OK:",newRef.key);
+  }catch(e){console.error("sendMsg error:",e);toast("⚠️ Mesaj gönderilemedi: "+e.message);}
 };
 
 window.pickFile=function(){document.getElementById("fileinput").click();};
