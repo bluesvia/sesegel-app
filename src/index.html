@@ -1106,19 +1106,28 @@ window.adminDeleteUser=async function(uid,username){
 const ELEVEN_API_KEY="7a013cee9581ad5f57de1f6e2d4d66677d2b41e70800d0d07142154bf37c5140";
 const ELEVEN_VOICE_ID="EXAVITQu4vr4xnSDxMaL";
 const ELEVEN_MODEL="eleven_multilingual_v2";
-const ttsCache={};
 let ttsQueue=[];
 let ttsPlaying=false;
 
 async function ttsSpeak(text){
-  const cacheKey=text.toLowerCase();
-  let audioUrl=ttsCache[cacheKey];
-  if(!audioUrl){
-    // IndexedDB cache kontrol
-    audioUrl=await idbGet(cacheKey);
-    if(audioUrl)ttsCache[cacheKey]=audioUrl;
+  const cacheKey="tts_"+text.toLowerCase().replace(/[^a-zçğıöşü0-9 ]/gi,"");
+
+  // 1) Bellekte var mı?
+  let blob=null;
+  const memBlob=ttsMemCache[cacheKey];
+  if(memBlob){blob=memBlob;}
+
+  // 2) IndexedDB'de var mı?
+  if(!blob){
+    const stored=await idbGet(cacheKey);
+    if(stored){
+      blob=stored;
+      ttsMemCache[cacheKey]=blob;
+    }
   }
-  if(!audioUrl){
+
+  // 3) API'den al
+  if(!blob){
     try{
       const resp=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}`,{
         method:"POST",
@@ -1126,21 +1135,28 @@ async function ttsSpeak(text){
         body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.5,similarity_boost:0.75}})
       });
       if(!resp.ok){console.error("ElevenLabs API error:",resp.status);return;}
-      const blob=await resp.blob();
-      audioUrl=URL.createObjectURL(blob);
-      ttsCache[cacheKey]=audioUrl;
-      // IndexedDB'ye kaydet
-      const reader=new FileReader();reader.onload=()=>idbSet(cacheKey,reader.result);reader.readAsDataURL(blob);
+      blob=await resp.blob();
+      // Kalıcı cache'e kaydet
+      ttsMemCache[cacheKey]=blob;
+      await idbSet(cacheKey,blob);
+      console.log("TTS cached:",cacheKey);
     }catch(e){console.error("TTS error:",e);return;}
+  }else{
+    console.log("TTS from cache:",cacheKey);
   }
+
+  // Oynat
+  const url=URL.createObjectURL(blob);
   return new Promise(resolve=>{
-    const a=new Audio(audioUrl);
+    const a=new Audio(url);
     a.volume=0.7;
-    a.onended=resolve;
-    a.onerror=resolve;
-    a.play().catch(resolve);
+    a.onended=()=>{URL.revokeObjectURL(url);resolve();};
+    a.onerror=()=>{URL.revokeObjectURL(url);resolve();};
+    a.play().catch(()=>{URL.revokeObjectURL(url);resolve();});
   });
 }
+
+const ttsMemCache={};
 
 function queueTTS(text){
   ttsQueue.push(text);
@@ -1157,20 +1173,23 @@ async function processTTSQueue(){
   ttsPlaying=false;
 }
 
-// IndexedDB helpers
+// IndexedDB helpers — Blob olarak kaydet/oku
 function idbOpen(){
   return new Promise((resolve,reject)=>{
-    const r=indexedDB.open("sesegel-tts",1);
-    r.onupgradeneeded=()=>r.result.createObjectStore("audio");
+    const r=indexedDB.open("sesegel-tts",2);
+    r.onupgradeneeded=(e)=>{
+      const d=r.result;
+      if(!d.objectStoreNames.contains("audio"))d.createObjectStore("audio");
+    };
     r.onsuccess=()=>resolve(r.result);
     r.onerror=()=>reject(r.error);
   });
 }
 async function idbGet(key){
-  try{const db2=await idbOpen();return new Promise(r=>{const tx=db2.transaction("audio","readonly");const s=tx.objectStore("audio").get(key);s.onsuccess=()=>r(s.result||null);s.onerror=()=>r(null);});}catch(e){return null;}
+  try{const d=await idbOpen();return new Promise(r=>{const tx=d.transaction("audio","readonly");const s=tx.objectStore("audio").get(key);s.onsuccess=()=>r(s.result instanceof Blob?s.result:null);s.onerror=()=>r(null);});}catch(e){return null;}
 }
-async function idbSet(key,val){
-  try{const db2=await idbOpen();const tx=db2.transaction("audio","readwrite");tx.objectStore("audio").put(val,key);}catch(e){}
+async function idbSet(key,blob){
+  try{const d=await idbOpen();const tx=d.transaction("audio","readwrite");tx.objectStore("audio").put(blob,key);}catch(e){console.error("idbSet error:",e);}
 }
 
 // Ses odası giriş/çıkış takibi
