@@ -1102,10 +1102,111 @@ window.adminDeleteUser=async function(uid,username){
   toast("🗑️ Hesap silindi: "+username);renderAdminPanel();
 };
 
+// ══════ ELEVENLABS TTS - SES BİLDİRİMLERİ ══════
+const ELEVEN_API_KEY="7a013cee9581ad5f57de1f6e2d4d66677d2b41e70800d0d07142154bf37c5140";
+const ELEVEN_VOICE_ID="CwhRBWXzGAHq8TQ4Fs17";
+const ELEVEN_MODEL="eleven_multilingual_v2";
+const ttsCache={};
+let ttsQueue=[];
+let ttsPlaying=false;
+
+async function ttsSpeak(text){
+  const cacheKey=text.toLowerCase();
+  let audioUrl=ttsCache[cacheKey];
+  if(!audioUrl){
+    // IndexedDB cache kontrol
+    audioUrl=await idbGet(cacheKey);
+    if(audioUrl)ttsCache[cacheKey]=audioUrl;
+  }
+  if(!audioUrl){
+    try{
+      const resp=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","xi-api-key":ELEVEN_API_KEY},
+        body:JSON.stringify({text,model_id:ELEVEN_MODEL,voice_settings:{stability:0.5,similarity_boost:0.75}})
+      });
+      if(!resp.ok){console.error("ElevenLabs API error:",resp.status);return;}
+      const blob=await resp.blob();
+      audioUrl=URL.createObjectURL(blob);
+      ttsCache[cacheKey]=audioUrl;
+      // IndexedDB'ye kaydet
+      const reader=new FileReader();reader.onload=()=>idbSet(cacheKey,reader.result);reader.readAsDataURL(blob);
+    }catch(e){console.error("TTS error:",e);return;}
+  }
+  return new Promise(resolve=>{
+    const a=new Audio(audioUrl);
+    a.volume=0.7;
+    a.onended=resolve;
+    a.onerror=resolve;
+    a.play().catch(resolve);
+  });
+}
+
+function queueTTS(text){
+  ttsQueue.push(text);
+  if(!ttsPlaying)processTTSQueue();
+}
+
+async function processTTSQueue(){
+  if(ttsPlaying||ttsQueue.length===0)return;
+  ttsPlaying=true;
+  while(ttsQueue.length>0){
+    const t=ttsQueue.shift();
+    await ttsSpeak(t);
+  }
+  ttsPlaying=false;
+}
+
+// IndexedDB helpers
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const r=indexedDB.open("sesegel-tts",1);
+    r.onupgradeneeded=()=>r.result.createObjectStore("audio");
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
+  });
+}
+async function idbGet(key){
+  try{const db2=await idbOpen();return new Promise(r=>{const tx=db2.transaction("audio","readonly");const s=tx.objectStore("audio").get(key);s.onsuccess=()=>r(s.result||null);s.onerror=()=>r(null);});}catch(e){return null;}
+}
+async function idbSet(key,val){
+  try{const db2=await idbOpen();const tx=db2.transaction("audio","readwrite");tx.objectStore("audio").put(val,key);}catch(e){}
+}
+
+// Ses odası giriş/çıkış takibi
+let prevVoiceMembers={};
+
+function trackVoiceChanges(newRooms){
+  if(!me||!inVC||!voiceRoom)return;
+  const newMembers=newRooms[voiceRoom]?.voiceMembers||{};
+  const oldUids=Object.keys(prevVoiceMembers);
+  const newUids=Object.keys(newMembers);
+
+  // Yeni girenler
+  newUids.forEach(uid=>{
+    if(uid!==me.uid&&!prevVoiceMembers[uid]){
+      const username=newMembers[uid]?.username||"Biri";
+      queueTTS(`${username} odaya giriş yaptı`);
+    }
+  });
+
+  // Çıkanlar
+  oldUids.forEach(uid=>{
+    if(uid!==me.uid&&!newMembers[uid]){
+      const username=prevVoiceMembers[uid]?.username||"Biri";
+      queueTTS(`${username} odadan ayrıldı`);
+    }
+  });
+
+  prevVoiceMembers=JSON.parse(JSON.stringify(newMembers));
+}
+
 // ══════ ROOMS ══════
 function loadRooms(){
   onValue(ref(db,"rooms"),snap=>{
-    rooms=snap.exists()?snap.val():{};renderSB();
+    const newRooms=snap.exists()?snap.val():{};
+    trackVoiceChanges(newRooms);
+    rooms=newRooms;renderSB();
     if(curRoom&&rooms[curRoom])loadMembers(curRoom);
   });
 }
@@ -1571,7 +1672,11 @@ window.joinVoice=async function(rid){
   document.getElementById("vbar").classList.add("on");
   setupSpeak(ls,me.uid);
   const s=await get(ref(db,`rooms/${rid}/voiceMembers`));
-  if(s.exists())s.forEach(c=>{const v=c.val();if(v.uid&&v.uid!==me.uid&&shouldInitiateOffer(v.uid))makeOffer(v.uid,rid);});
+  // Mevcut üyeleri snapshot al (ilk seferde herkesi "giriş yaptı" demesin)
+  if(s.exists()){
+    const snap={};s.forEach(c=>{snap[c.key]=c.val();});prevVoiceMembers=snap;
+    s.forEach(c=>{const v=c.val();if(v.uid&&v.uid!==me.uid&&shouldInitiateOffer(v.uid))makeOffer(v.uid,rid);});
+  }else{prevVoiceMembers={};}
   listenSig(rid);renderSB();
   toast(noiseEnabled?"🎙️ Bağlandı · Gürültü engelleme aktif":"🎙️ Ses kanalına bağlandı");
 };
@@ -1580,6 +1685,7 @@ window.leaveVoice=function(){
   if(!inVC&&!voiceRoom)return;
   const rid=voiceRoom;
   inVC=false;voiceRoom=null;
+  prevVoiceMembers={};
   cleanupVoiceListeners();
   pendingIce={};
   if(ls){ls.getTracks().forEach(t=>t.stop());ls=null;}
