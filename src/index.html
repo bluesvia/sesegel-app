@@ -168,6 +168,19 @@ body{background:var(--bg1);color:var(--t1);font-family:var(--font);font-size:15p
 
 /* INPUT */
 #inputarea{padding:0 16px 16px;flex-shrink:0;}
+#attach-preview{padding:0 0 4px;}
+.ap-wrap{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:var(--r);padding:6px 10px;max-width:300px;}
+.ap-img{max-height:80px;max-width:200px;border-radius:6px;object-fit:cover;}
+.ap-file{color:var(--t2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}
+.ap-rm{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;}
+.ap-rm:hover{background:rgba(255,255,255,.1);color:#fff;}
+.mattach{margin-top:6px;}
+.mattach-img{max-width:400px;max-height:300px;border-radius:8px;cursor:pointer;transition:opacity .15s;}
+.mattach-img:hover{opacity:.85;}
+.mattach-file{color:var(--accent1);text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px;background:rgba(124,58,237,.1);padding:6px 12px;border-radius:var(--r);transition:background .15s;}
+.mattach-file:hover{background:rgba(124,58,237,.2);}
+.iupload{width:36px;height:36px;flex-shrink:0;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:18px;}
+.iupload:hover{color:var(--accent1);}
 #emojitray{display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rlg);padding:10px;flex-wrap:wrap;gap:6px;margin-bottom:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);}
 #emojitray.open{display:flex;}
 #emojitray button{font-size:22px;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:var(--r);}
@@ -595,9 +608,12 @@ body{background:var(--bg1);color:var(--t1);font-family:var(--font);font-size:15p
     </div>
     <div id="msgwrap"></div>
     <div id="inputarea">
+      <div id="attach-preview"></div>
       <div id="emojitray"></div>
       <div class="ibox">
         <button class="iemoji" onclick="toggleEmoji()">😊</button>
+        <button class="iupload" onclick="pickFile()" title="Dosya ekle"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg></button>
+        <input type="file" id="fileinput" style="display:none" accept="image/*,video/*,.pdf,.doc,.docx,.zip,.rar">
         <textarea id="msginput" rows="1" placeholder="Mesaj yaz..."></textarea>
         <button class="isend" onclick="sendMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
       </div>
@@ -754,6 +770,7 @@ body{background:var(--bg1);color:var(--t1);font-family:var(--font);font-size:15p
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getDatabase,ref,set,get,push,remove,update,onValue,onDisconnect,serverTimestamp,off}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import{getStorage,ref as sRef,uploadBytes,getDownloadURL}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyAkUL61b_FeTcEdqJIUzDExoZnmlqV6-DI",
@@ -766,6 +783,7 @@ const firebaseConfig={
 };
 const app=initializeApp(firebaseConfig);
 const db=getDatabase(app);
+const storage=getStorage(app);
 
 const ADMIN_USERNAME="Obiyav";
 
@@ -806,7 +824,7 @@ function isAdmin(){return me&&me.username===ADMIN_USERNAME;}
 function uCol(s){if(!s)return"linear-gradient(135deg,#7c3aed,#a855f7)";let h=0;for(let i=0;i<s.length;i++){h=s.charCodeAt(i)+((h<<5)-h);}const colors=["linear-gradient(135deg,#f97316,#ef4444)","linear-gradient(135deg,#3b82f6,#8b5cf6)","linear-gradient(135deg,#10b981,#059669)","linear-gradient(135deg,#ec4899,#a855f7)","linear-gradient(135deg,#f59e0b,#d97706)","linear-gradient(135deg,#06b6d4,#0284c7)","linear-gradient(135deg,#8b5cf6,#6d28d9)","linear-gradient(135deg,#f97316,#ea580c)"];return colors[Math.abs(h)%colors.length];}
 function ini(s){if(!s)return"?";return s.slice(0,2).toUpperCase();}
 function gid(){return Math.random().toString(36).slice(2,10);}
-function ts(){return new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});}
+function ts(t){return new Date(t||Date.now()).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});}
 function ds(t){return new Date(t).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric"});}
 function esc(s){if(!s)return"";const d=document.createElement("div");d.textContent=s;return d.innerHTML;}
 async function sha256(m){const e=new TextEncoder().encode(m);const h=await crypto.subtle.digest("SHA-256",e);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");}
@@ -1152,6 +1170,7 @@ function loadMsgs(rid){
   if(msgUnsub)msgUnsub();
   const mref=ref(db,`messages/${rid}`);msgUnsub=()=>off(mref);
   onValue(mref,snap=>{
+    try{
     const wrap=document.getElementById("msgwrap");
     if(!snap.exists()){wrap.innerHTML=`<div class="empty"><h3>Henüz mesaj yok</h3><p style="color:var(--t3)">İlk mesajı sen yaz!</p></div>`;return;}
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
@@ -1167,14 +1186,22 @@ function loadMsgs(rid){
       if(isFirst){
         html+=`<div class="mav-col"><div class="mav" style="background:${c}">${img}</div></div>`;
         html+=`<div class="mcontent"><div class="mmeta"><span class="mauthor" style="color:var(--accent2)">${esc(m.username)}${crownBadge(m.username)}</span>`;
-        html+=`<span class="mts">${m.ts?ts()+" · "+d:""}</span></div>`;
+        html+=`<span class="mts">${m.ts?ts(m.ts)+" · "+d:""}</span></div>`;
       }else{html+=`<div class="mav-col"></div><div class="mcontent">`;}
       html+=`<div class="mtext">${esc(m.text)}</div>`;
+      if(m.attachment){
+        if(m.attachment.type&&m.attachment.type.startsWith("image/")){
+          html+=`<div class="mattach"><img src="${esc(m.attachment.url)}" class="mattach-img" onclick="window.open('${esc(m.attachment.url)}','_blank')"></div>`;
+        }else{
+          html+=`<div class="mattach"><a href="${esc(m.attachment.url)}" target="_blank" class="mattach-file">📎 ${esc(m.attachment.name)}</a></div>`;
+        }
+      }
       if(m.reactions){html+=`<div class="mrxns">`;Object.keys(m.reactions).forEach(emoji=>{const users=m.reactions[emoji];const count=Object.keys(users).length;const mine=users[me.uid]?"mine":"";html+=`<span class="rxn ${mine}" onclick="toggleRxn('${rid}','${m.id}','${emoji}')">${emoji} <span class="rxn-cnt">${count}</span></span>`;});html+=`</div>`;}
       html+=`</div><div class="mhov">`;EMOJIS.slice(0,5).forEach(e=>html+=`<button class="mhov-btn" onclick="quickReact('${rid}','${m.id}','${e}')">${e}</button>`);html+=`</div></div>`;
     });
     wrap.innerHTML=html;wrap.scrollTop=wrap.scrollHeight;
-  });
+    }catch(e){console.error("loadMsgs render error:",e);}
+  },err=>{console.error("loadMsgs Firebase error:",err);toast("⚠️ Mesajlar yüklenemedi");});
 }
 
 window.quickReact=window.toggleRxn=async function(rid,mid,emoji){
@@ -1183,12 +1210,64 @@ window.quickReact=window.toggleRxn=async function(rid,mid,emoji){
   if(snap.exists())await remove(ref(db,rpath));else await set(ref(db,rpath),true);
 };
 
+let pendingAttachment=null;
+
 window.sendMsg=async function(){
   if(!curRoom)return;const inp=document.getElementById("msginput");
-  const text=inp.value.trim();if(!text)return;
-  await set(push(ref(db,`messages/${curRoom}`)),{uid:me.uid,username:me.username,text,ts:Date.now(),profileImage:me.profileImage||null});
-  inp.value="";inp.style.height="auto";
+  const text=inp.value.trim();
+  if(!text&&!pendingAttachment)return;
+  const msgData={uid:me.uid,username:me.username,text:text||"",ts:Date.now(),profileImage:me.profileImage||null};
+  if(pendingAttachment){msgData.attachment=pendingAttachment;pendingAttachment=null;clearAttachPreview();}
+  try{
+    await set(push(ref(db,`messages/${curRoom}`)),msgData);
+    inp.value="";inp.style.height="auto";
+  }catch(e){console.error("sendMsg error:",e);toast("⚠️ Mesaj gönderilemedi");}
 };
+
+window.pickFile=function(){document.getElementById("fileinput").click();};
+
+async function handleFileUpload(file){
+  if(!file||!curRoom)return;
+  if(file.size>10*1024*1024){toast("⚠️ Dosya 10MB'dan küçük olmalı");return;}
+  toast("📎 Dosya yükleniyor...");
+  try{
+    const path=`attachments/${curRoom}/${Date.now()}_${file.name}`;
+    const fileRef=sRef(storage,path);
+    await uploadBytes(fileRef,file);
+    const url=await getDownloadURL(fileRef);
+    pendingAttachment={url,name:file.name,type:file.type,size:file.size};
+    showAttachPreview(file);
+    toast("✓ Dosya hazır, mesajı gönder");
+  }catch(e){
+    console.error("Upload error:",e);
+    if(e.code==="storage/unauthorized"){
+      // Firebase Storage izni yok, Base64 ile dene
+      try{
+        const reader=new FileReader();
+        reader.onload=()=>{
+          pendingAttachment={url:reader.result,name:file.name,type:file.type,size:file.size};
+          showAttachPreview(file);
+          toast("✓ Dosya hazır, mesajı gönder");
+        };
+        reader.readAsDataURL(file);
+      }catch(e2){toast("⚠️ Dosya yüklenemedi");}
+    }else{toast("⚠️ Dosya yüklenemedi");}
+  }
+}
+
+function showAttachPreview(file){
+  const prev=document.getElementById("attach-preview");
+  if(file.type.startsWith("image/")){
+    const reader=new FileReader();
+    reader.onload=()=>{prev.innerHTML=`<div class="ap-wrap"><img src="${reader.result}" class="ap-img"><button class="ap-rm" onclick="clearAttach()">✕</button></div>`;};
+    reader.readAsDataURL(file);
+  }else{
+    prev.innerHTML=`<div class="ap-wrap"><span class="ap-file">📎 ${esc(file.name)}</span><button class="ap-rm" onclick="clearAttach()">✕</button></div>`;
+  }
+}
+
+window.clearAttach=function(){pendingAttachment=null;clearAttachPreview();};
+function clearAttachPreview(){document.getElementById("attach-preview").innerHTML="";}
 
 window.toggleEmoji=function(){
   const tray=document.getElementById("emojitray");
@@ -1199,6 +1278,7 @@ window.toggleEmoji=function(){
 
 document.getElementById("msginput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg();}});
 document.getElementById("msginput").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,200)+"px";});
+document.getElementById("fileinput").addEventListener("change",function(e){const f=e.target.files[0];if(f)handleFileUpload(f);this.value="";});
 
 // ══════ MEMBERS ══════
 function loadMembers(rid){
