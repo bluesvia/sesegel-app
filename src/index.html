@@ -1104,7 +1104,7 @@ window.adminDeleteUser=async function(uid,username){
 
 // ══════ ELEVENLABS TTS - SES BİLDİRİMLERİ ══════
 const ELEVEN_API_KEY="7a013cee9581ad5f57de1f6e2d4d66677d2b41e70800d0d07142154bf37c5140";
-const ELEVEN_VOICE_ID="CwhRBWXzGAHq8TQ4Fs17";
+const ELEVEN_VOICE_ID="EXAVITQu4vr4xnSDxMaL";
 const ELEVEN_MODEL="eleven_multilingual_v2";
 const ttsCache={};
 let ttsQueue=[];
@@ -1186,7 +1186,7 @@ function trackVoiceChanges(newRooms){
   newUids.forEach(uid=>{
     if(uid!==me.uid&&!prevVoiceMembers[uid]){
       const username=newMembers[uid]?.username||"Biri";
-      queueTTS(`${username} odaya giriş yaptı`);
+      queueTTS(`${username} odaya giriş yaptı.`);
     }
   });
 
@@ -1194,7 +1194,7 @@ function trackVoiceChanges(newRooms){
   oldUids.forEach(uid=>{
     if(uid!==me.uid&&!newMembers[uid]){
       const username=prevVoiceMembers[uid]?.username||"Biri";
-      queueTTS(`${username} odadan ayrıldı`);
+      queueTTS(`${username} odadan ayrıldı.`);
     }
   });
 
